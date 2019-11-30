@@ -7,10 +7,14 @@ import aiohttp
 import async_timeout
 from yarl import URL
 
+from .exceptions import NSConnectionError, NSError
 from .models import GlucoseMonitor
 
 
 class NS:
+
+    glucose_info: Optional[GlucoseMonitor] = None
+
     def __init__(
         self,
         host: str,
@@ -67,10 +71,15 @@ class NS:
                     params=params,
                     headers=headers,
                 )
-        except asyncio.TimeoutError:
-            print("Timeout occurred.")
-        except (aiohttp.ClientError, socket.gaierror):
-            print("Error occurred while communicating.")
+        except asyncio.TimeoutError as exception:
+            raise NSConnectionError(
+                "Timeout occurred while connecting to NS.   "
+            ) from exception
+        except (aiohttp.ClientError, socket.gaierror) as exception:
+            raise NSConnectionError(
+                "Error occurred while communicating with NS Api."
+            ) from exception
+
         content_type = response.headers.get("Content-Type", "")
 
         if "application/json" in content_type:
@@ -80,9 +89,12 @@ class NS:
 
     async def update(self) -> Optional[GlucoseMonitor]:
         """Get all information in a single call."""
-
-        data = await self._request()
-        self.glucose_info = GlucoseMonitor.from_dict(data)
+        try:
+            data = await self._request()
+            self.glucose_info = GlucoseMonitor.from_dict(data)
+        except NSError as exception:
+            self.glucose_info = None
+            raise exception
 
         return self.glucose_info
 
