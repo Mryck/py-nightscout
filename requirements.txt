@@ -1,4 +1,4 @@
 ## The following requirements were added by pip freeze:
-aiohttp==3.7.4.post0
+aiohttp==3.8.4
 attrs==20.3.0
 yarl==1.6.3
